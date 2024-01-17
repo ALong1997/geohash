@@ -2,11 +2,11 @@ package geohash
 
 import (
 	"errors"
+	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
-
-type Geohash string
 
 const (
 	minLat = -90
@@ -24,6 +24,8 @@ const (
 
 	invalidCode = 32
 )
+
+const coordinateToM = 111
 
 var (
 	encoder = [32]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -49,20 +51,67 @@ var (
 			11 | 14.9cm | 14.9m
 			12 | 3.7cm | 1.9cm
 	*/
-	maxIncircleDiameterRank = [geohashLen]uint32{4992600, 624100, 156000, 19500, 4900, 609, 152, 19}
+	incircleDiameterRank = [geohashLen]uint32{4992600, 624100, 156000, 19500, 4900, 609, 152, 19}
 )
 
 var ErrInvalidDiameter = errors.New("invalid diameter")
 
-// GetGeohash converts the longitude and latitude into corresponding fixed 40-bit geohash strings,
+type Geohash string
+
+func (g Geohash) valid() bool {
+	if len(g) != geohashLen {
+		return false
+	}
+
+	for i := 0; i < geohashLen; i++ {
+		if decode(g[i]) == invalidCode {
+			return false
+		}
+	}
+	return true
+}
+
+type Point struct {
+	Lng, Lat float64
+}
+
+func NewPoint(lng, lat float64) *Point {
+	return &Point{
+		Lng: lng,
+		Lat: lat,
+	}
+}
+
+func (p *Point) GetLng() float64 {
+	if p == nil {
+		return 0
+	}
+	return p.Lng
+}
+
+func (p *Point) GetLat() float64 {
+	if p == nil {
+		return 0
+	}
+	return p.Lat
+}
+
+func (p *Point) Distance(target *Point) float64 {
+	if p == nil || target == nil {
+		return 0
+	}
+	return coordinateToM * (math.Pow(p.Lng-target.Lng, 2) + math.Pow(p.Lat-target.Lat, 2))
+}
+
+// Geohash converts the longitude and latitude into corresponding fixed 40-bit geohash strings,
 // 5 bits is mapped by one base32, so it consists of a total of 8 base32 characters.
-func GetGeohash(point *Point) Geohash {
-	if point == nil {
+func (p *Point) Geohash() Geohash {
+	if p == nil {
 		return ""
 	}
 	geohash := strings.Builder{}
-	lngBits := encode(point.GetLng(), minLng, maxLng)
-	latBits := encode(point.GetLat(), minLat, maxLat)
+	lngBits := encode(p.Lng, minLng, maxLng)
+	latBits := encode(p.Lat, minLat, maxLat)
 
 	mixBits := strings.Builder{}
 	for i := 1; i <= bitsLen<<1; i++ {
@@ -82,18 +131,44 @@ func GetGeohash(point *Point) Geohash {
 	return Geohash(geohash.String())
 }
 
-// check whether geohash is valid
-func (g Geohash) check() bool {
-	if len(g) != geohashLen {
-		return false
+func (p *Point) key() string {
+	if p == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v_%v", p.Lng, p.Lat)
+}
+
+// circumscribedSquarePointsByCircle return the circumscribed square of the circle with point as the p and radius as the radius
+func (p *Point) circumscribedSquarePointsByCircle(radius uint32) [9]*Point {
+	dif := float64(radius) / coordinateToM
+	left := p.Lng - dif
+	if left < minLng {
+		left += maxLng << 1
+	}
+	right := p.Lng + dif
+	if right > maxLng {
+		right -= maxLng << 1
+	}
+	bot := p.Lat - dif
+	if bot < minLat {
+		bot += maxLat << 1
+	}
+	top := p.Lat + dif
+	if top > maxLat {
+		top -= maxLat << 1
 	}
 
-	for i := 0; i < geohashLen; i++ {
-		if decode(g[i]) == invalidCode {
-			return false
-		}
+	return [9]*Point{
+		NewPoint(left, top),
+		NewPoint(p.Lng, top),
+		NewPoint(right, top),
+		NewPoint(left, p.Lat),
+		NewPoint(p.Lng, p.Lat),
+		NewPoint(right, p.Lat),
+		NewPoint(left, bot),
+		NewPoint(p.Lng, bot),
+		NewPoint(right, bot),
 	}
-	return true
 }
 
 // encode converts the latitude or longitude coordinate into corresponding fixed 20-bit binary string
@@ -123,13 +198,14 @@ func decode(bit byte) uint8 {
 
 // getGeohashLenByDiameter returns the minimum length of geohash required by the circumscribed rectangle,
 // according to the diameter of the circle
+// diameter <= incircleDiameterRank[2]
 func getGeohashLenByDiameter(diameter uint32) (uint8, error) {
-	if diameter == 0 || diameter > maxIncircleDiameterRank[geohashLen-1] {
+	if diameter == 0 || diameter > incircleDiameterRank[2] {
 		return 0, ErrInvalidDiameter
 	}
 
 	for i := geohashLen - 1; i >= 0; i-- {
-		if maxIncircleDiameterRank[i] >= diameter {
+		if incircleDiameterRank[i] >= diameter {
 			return uint8(i), nil
 		}
 	}

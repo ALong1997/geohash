@@ -27,7 +27,7 @@ func NewTrie() *Trie {
 }
 
 func (t *Trie) Get(geohash Geohash) (*Box, bool) {
-	if t == nil || !geohash.check() {
+	if t == nil || !geohash.valid() {
 		return nil, false
 	}
 
@@ -41,7 +41,7 @@ func (t *Trie) Get(geohash Geohash) (*Box, bool) {
 	return n.Box, true
 }
 
-func (t *Trie) ListByPrefix(prefix string) []*Box {
+func (t *Trie) GetBoxesByPrefix(prefix string) []*Box {
 	if t == nil || len(prefix) == 0 {
 		return nil
 	}
@@ -60,12 +60,12 @@ func (t *Trie) ListByPrefix(prefix string) []*Box {
 	return n.dfs()
 }
 
-func (t *Trie) Insert(point *Point) {
+func (t *Trie) Put(point *Point) {
 	if t == nil || point == nil {
 		return
 	}
 
-	geohash := GetGeohash(point)
+	geohash := point.Geohash()
 
 	t.Lock()
 	defer t.Unlock()
@@ -89,7 +89,7 @@ func (t *Trie) Insert(point *Point) {
 }
 
 func (t *Trie) Delete(geohash Geohash) bool {
-	if t == nil || !geohash.check() {
+	if t == nil || !geohash.valid() {
 		return false
 	}
 
@@ -114,6 +114,31 @@ func (t *Trie) Delete(geohash Geohash) bool {
 	}
 
 	return false
+}
+
+func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error) {
+	l, err := getGeohashLenByDiameter(radius << 1)
+	if err != nil {
+		return nil, err
+	}
+
+	points := center.circumscribedSquarePointsByCircle(radius)
+
+	t.RLock()
+	defer t.RUnlock()
+
+	var res []*Point
+	for _, p := range points {
+		for _, box := range t.GetBoxesByPrefix(string(p.Geohash()[:l])) {
+			for _, v := range box.GetAllPoints() {
+				if center.Distance(v) <= float64(radius) {
+					res = append(res, v)
+				}
+			}
+		}
+	}
+
+	return res, nil
 }
 
 func (t *Trie) search(prefix string) *node {

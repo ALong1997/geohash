@@ -2,17 +2,17 @@ package geohash
 
 // Box is a rectangle in latitude/longitude space
 type Box struct {
-	Geohash Geohash
-	Points  map[string]*Point
+	Geohash  Geohash
+	PointSet map[string]*Point
 }
 
-func NewBox(geohash Geohash, points map[string]*Point) *Box {
-	if !geohash.check() {
+func NewBox(geohash Geohash, pointSet map[string]*Point) *Box {
+	if !geohash.valid() {
 		return nil
 	}
 	return &Box{
-		Geohash: geohash,
-		Points:  points,
+		Geohash:  geohash,
+		PointSet: pointSet,
 	}
 }
 
@@ -23,32 +23,32 @@ func (b *Box) GetGeohash() Geohash {
 	return b.Geohash
 }
 
-func (b *Box) GetPoints() map[string]*Point {
+func (b *Box) GetPointSet() map[string]*Point {
 	if b == nil {
 		return nil
 	}
-	return b.Points
+	return b.PointSet
 }
 
 func (b *Box) GetAllPoints() []*Point {
-	if b == nil || len(b.Points) == 0 {
+	if b == nil || len(b.PointSet) == 0 {
 		return []*Point{}
 	}
 
-	res := make([]*Point, 0, len(b.Points))
-	for _, point := range b.Points {
+	res := make([]*Point, 0, len(b.PointSet))
+	for _, point := range b.PointSet {
 		res = append(res, point)
 	}
 	return res
 }
 
 func (b *Box) add(point *Point) {
-	if b == nil || !b.Geohash.check() || point == nil {
+	if b == nil || !b.Geohash.valid() || point == nil {
 		return
 	}
 
-	if len(b.Points) == 0 {
-		b.Points = map[string]*Point{}
+	if len(b.PointSet) == 0 {
+		b.PointSet = map[string]*Point{}
 	}
-	b.Points[point.key()] = point
+	b.PointSet[point.key()] = point
 }
