@@ -127,13 +127,17 @@ func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error)
 	t.RLock()
 	defer t.RUnlock()
 
-	var res []*Point
+	res := make([]*Point, 0)
+	duplicateBox := map[Geohash]struct{}{}
 	for _, p := range points {
 		for _, box := range t.GetBoxesByPrefix(string(p.Geohash()[:l])) {
-			for _, v := range box.GetAllPoints() {
-				if center.Distance(v) <= radius {
-					res = append(res, v)
+			if _, ok := duplicateBox[box.GetGeohash()]; !ok {
+				for _, v := range box.GetAllPoints() {
+					if center.Distance(v) <= radius {
+						res = append(res, v)
+					}
 				}
+				duplicateBox[box.GetGeohash()] = struct{}{}
 			}
 		}
 	}
@@ -147,7 +151,7 @@ func (t *Trie) search(prefix string) *node {
 	}
 
 	move := t.root
-	for i := 0; i < geohashLen; i++ {
+	for i := 0; i < len(prefix); i++ {
 		childIndex := decode(prefix[i])
 		if childIndex == invalidCode || move.children[childIndex] == nil {
 			return nil
@@ -162,13 +166,19 @@ func (n *node) dfs() []*Box {
 	if n == nil {
 		return nil
 	}
+	if n.passCount == 0 {
+		return []*Box{}
+	}
+
 	if n.isLeaf {
 		return []*Box{n.Box}
 	}
 
 	res := make([]*Box, 0, n.passCount)
-	for i := 0; i < len(n.children) && n.children[i] != nil; i++ {
-		res = append(res, n.children[i].dfs()...)
+	for i := 0; i < len(n.children); i++ {
+		if n.children[i] != nil {
+			res = append(res, n.children[i].dfs()...)
+		}
 	}
 
 	return res
