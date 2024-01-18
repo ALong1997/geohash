@@ -131,7 +131,7 @@ func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error)
 	for _, p := range points {
 		for _, box := range t.GetBoxesByPrefix(string(p.Geohash()[:l])) {
 			for _, v := range box.GetAllPoints() {
-				if center.Distance(v) <= float64(radius) {
+				if center.Distance(v) <= radius {
 					res = append(res, v)
 				}
 			}

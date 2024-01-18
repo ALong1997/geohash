@@ -25,7 +25,10 @@ const (
 	invalidCode = 32
 )
 
-const coordinateToM = 111
+const (
+	earthRadius   = 6371000
+	coordinateToM = 111000
+)
 
 var (
 	encoder = [32]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -105,11 +108,11 @@ func (p *Point) GetAny() (val any) {
 	return p.Val
 }
 
-func (p *Point) Distance(target *Point) float64 {
+func (p *Point) Distance(target *Point) uint32 {
 	if p == nil || target == nil {
 		return 0
 	}
-	return coordinateToM * (math.Pow(p.Lng-target.Lng, 2) + math.Pow(p.Lat-target.Lat, 2))
+	return uint32(haversine(p, target))
 }
 
 // Geohash converts the longitude and latitude into corresponding fixed 40-bit geohash strings,
@@ -147,7 +150,7 @@ func (p *Point) key() string {
 	return fmt.Sprintf("%v_%v", p.Lng, p.Lat)
 }
 
-// circumscribedSquarePointsByCircle return the circumscribed square of the circle with point as the p and radius as the radius
+// circumscribedSquarePointsByCircle return the circumscribed square of the circle with point and radius
 func (p *Point) circumscribedSquarePointsByCircle(radius uint32) [9]*Point {
 	dif := float64(radius) / coordinateToM
 	left := p.Lng - dif
@@ -215,9 +218,32 @@ func getGeohashLenByDiameter(diameter uint32) (uint8, error) {
 
 	for i := geohashLen - 1; i >= 0; i-- {
 		if incircleDiameterRank[i] >= diameter {
-			return uint8(i), nil
+			return uint8(i) + 1, nil
 		}
 	}
 
 	return 0, ErrInvalidDiameter
+}
+
+// haversine formula is used to calculate the distance of large circle route between two latitude and longitude coordinates.
+// a = sin²((lat₂ - lat₁)/2) + cos(lat₁) * cos(lat₂) * sin²((lng₂ - lng₁)/2)
+// c = 2 * atan2(√a, √(1−a))
+// d = R * c
+func haversine(p1, p2 *Point) float64 {
+	if p1 == nil || p2 == nil {
+		return 0
+	}
+
+	// 将经纬度转换为弧度
+	radianLat1 := p1.Lat * (math.Pi / 180)
+	radianLat2 := p2.Lat * (math.Pi / 180)
+	radianDifLat := (p2.Lat - p1.Lat) * (math.Pi / 180)
+	radianDifLng := (p2.Lng - p1.Lng) * (math.Pi / 180)
+
+	// 应用Haversine公式
+	a := math.Sin(radianDifLat/2)*math.Sin(radianDifLat/2) + math.Cos(radianLat1)*math.Cos(radianLat2)*math.Sin(radianDifLng/2)*math.Sin(radianDifLng/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	d := earthRadius * c
+
+	return d
 }
