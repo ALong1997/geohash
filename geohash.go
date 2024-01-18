@@ -73,12 +73,14 @@ func (g Geohash) valid() bool {
 
 type Point struct {
 	Lng, Lat float64
+	Val      any
 }
 
-func NewPoint(lng, lat float64) *Point {
+func NewPoint(lng, lat float64, val any) *Point {
 	return &Point{
 		Lng: lng,
 		Lat: lat,
+		Val: val,
 	}
 }
 
@@ -94,6 +96,13 @@ func (p *Point) GetLat() float64 {
 		return 0
 	}
 	return p.Lat
+}
+
+func (p *Point) GetAny() (val any) {
+	if p == nil {
+		return
+	}
+	return p.Val
 }
 
 func (p *Point) Distance(target *Point) float64 {
@@ -159,15 +168,15 @@ func (p *Point) circumscribedSquarePointsByCircle(radius uint32) [9]*Point {
 	}
 
 	return [9]*Point{
-		NewPoint(left, top),
-		NewPoint(p.Lng, top),
-		NewPoint(right, top),
-		NewPoint(left, p.Lat),
-		NewPoint(p.Lng, p.Lat),
-		NewPoint(right, p.Lat),
-		NewPoint(left, bot),
-		NewPoint(p.Lng, bot),
-		NewPoint(right, bot),
+		NewPoint(left, top, nil),
+		NewPoint(p.Lng, top, nil),
+		NewPoint(right, top, nil),
+		NewPoint(left, p.Lat, nil),
+		NewPoint(p.Lng, p.Lat, nil),
+		NewPoint(right, p.Lat, nil),
+		NewPoint(left, bot, nil),
+		NewPoint(p.Lng, bot, nil),
+		NewPoint(right, bot, nil),
 	}
 }
 
