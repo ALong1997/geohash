@@ -27,7 +27,7 @@ const (
 
 const (
 	earthRadius   = 6371000
-	coordinateToM = 111000
+	coordinateToM = 111000 // estimated value of latitude and longitude converted into meters
 )
 
 var (
@@ -39,21 +39,6 @@ var (
 		'B': 10, 'C': 11, 'D': 12, 'E': 13, 'F': 14, 'G': 15, 'H': 16, 'J': 17, 'K': 18, 'M': 19, 'N': 20,
 		'P': 21, 'Q': 22, 'R': 23, 'S': 24, 'T': 25, 'U': 26, 'V': 27, 'W': 28, 'X': 29, 'Y': 30, 'Z': 31}
 
-	/*
-		geohash length | width | height
-			1 | 5009.4km | 4992.6km
-			2 | 1252.3km | 624.1km
-			3 | 156.5km | 156km
-			4 | 39.1km | 19.5km
-			5 | 4.9km | 4.9km
-			6 | 1.2km | 609.4m
-			7 | 152.9m | 152.4m
-			8 | 38.2m | 19m
-			9 | 4.8m | 4.8m
-			10 | 1.2m | 59.5cm
-			11 | 14.9cm | 14.9m
-			12 | 3.7cm | 1.9cm
-	*/
 	incircleDiameterRank = [geohashLen]uint32{4992600, 624100, 156000, 19500, 4900, 609, 152, 19}
 )
 
