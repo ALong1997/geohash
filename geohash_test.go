@@ -219,8 +219,8 @@ func TestPoint_GetAny(t *testing.T) {
 				Lat: tt.fields.Lat,
 				Val: tt.fields.Val,
 			}
-			if gotVal := p.GetAny(); !reflect.DeepEqual(gotVal, tt.wantVal) {
-				t.Errorf("GetAny() = %v, want %v", gotVal, tt.wantVal)
+			if gotVal := p.GetVal(); !reflect.DeepEqual(gotVal, tt.wantVal) {
+				t.Errorf("GetVal() = %v, want %v", gotVal, tt.wantVal)
 			}
 		})
 	}

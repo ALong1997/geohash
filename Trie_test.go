@@ -50,11 +50,11 @@ func TestTrie_GetBoxesByPrefix(t1 *testing.T) {
 	t.Put(p2)
 	t1.Run("TestTrie_GetBoxesByPrefix", func(t1 *testing.T) {
 		want := []*Box{NewBox(p1.Geohash(), map[string]*Point{p1.key(): p1})}
-		if got := t.GetBoxesByPrefix(string(p1.Geohash())[:7]); !reflect.DeepEqual(got, want) {
-			t1.Errorf("GetBoxesByPrefix() = %v, want %v", got, want)
+		if got := t.GetByPrefix(string(p1.Geohash())[:7]); !reflect.DeepEqual(got, want) {
+			t1.Errorf("GetByPrefix() = %v, want %v", got, want)
 		}
-		if got := t.GetBoxesByPrefix("?"); got != nil {
-			t1.Errorf("GetBoxesByPrefix() = %v, want %v", got, nil)
+		if got := t.GetByPrefix("?"); got != nil {
+			t1.Errorf("GetByPrefix() = %v, want %v", got, nil)
 		}
 	})
 }

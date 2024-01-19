@@ -42,7 +42,7 @@ func (t *Trie) Get(geohash Geohash) (*Box, bool) {
 	return n.Box, true
 }
 
-func (t *Trie) GetBoxesByPrefix(prefix string) []*Box {
+func (t *Trie) GetByPrefix(prefix string) []*Box {
 	if t == nil || t.root == nil || len(prefix) == 0 {
 		return nil
 	}
@@ -134,7 +134,7 @@ func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error)
 	res := make([]*Point, 0)
 	duplicateBox := map[Geohash]struct{}{}
 	for _, p := range points {
-		for _, box := range t.GetBoxesByPrefix(string(p.Geohash()[:l])) {
+		for _, box := range t.GetByPrefix(string(p.Geohash()[:l])) {
 			if _, ok := duplicateBox[box.GetGeohash()]; !ok {
 				for _, v := range box.GetAllPoints() {
 					if center.Distance(v) <= radius {

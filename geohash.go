@@ -101,7 +101,7 @@ func (p *Point) GetLat() float64 {
 	return p.Lat
 }
 
-func (p *Point) GetAny() (val any) {
+func (p *Point) GetVal() (val any) {
 	if p == nil {
 		return
 	}
