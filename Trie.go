@@ -1,6 +1,7 @@
 package geohash
 
 import (
+	"errors"
 	"sync"
 )
 
@@ -15,7 +16,7 @@ type (
 
 	node struct {
 		children  [32]*node // base32
-		passCount uint32    // the number of Box pass the node
+		passCount uint32    // the number of Box pass the node (leafNode.passCount = 0)
 
 		isLeaf bool
 		*Box   // only belongs to leaf node
@@ -27,7 +28,7 @@ func NewTrie() *Trie {
 }
 
 func (t *Trie) Get(geohash Geohash) (*Box, bool) {
-	if t == nil || !geohash.valid() {
+	if t == nil || t.root == nil || !geohash.valid() {
 		return nil, false
 	}
 
@@ -42,7 +43,7 @@ func (t *Trie) Get(geohash Geohash) (*Box, bool) {
 }
 
 func (t *Trie) GetBoxesByPrefix(prefix string) []*Box {
-	if t == nil || len(prefix) == 0 {
+	if t == nil || t.root == nil || len(prefix) == 0 {
 		return nil
 	}
 
@@ -61,7 +62,7 @@ func (t *Trie) GetBoxesByPrefix(prefix string) []*Box {
 }
 
 func (t *Trie) Put(point *Point) {
-	if t == nil || point == nil {
+	if t == nil || t.root == nil || point == nil {
 		return
 	}
 
@@ -81,7 +82,7 @@ func (t *Trie) Put(point *Point) {
 		if move.children[childIndex] == nil {
 			move.children[childIndex] = &node{}
 		}
-		move.children[childIndex].passCount++
+		move.passCount++
 		move = move.children[childIndex]
 	}
 	move.isLeaf = true
@@ -89,7 +90,7 @@ func (t *Trie) Put(point *Point) {
 }
 
 func (t *Trie) Delete(geohash Geohash) bool {
-	if t == nil || !geohash.valid() {
+	if t == nil || t.root == nil || !geohash.valid() {
 		return false
 	}
 
@@ -104,9 +105,8 @@ func (t *Trie) Delete(geohash Geohash) bool {
 	move := t.root
 	for i := 0; i < geohashLen; i++ {
 		index := decode(geohash[i])
-		move.children[index].passCount--
-		if move.children[index].passCount == 0 {
-			// The passCount of the leaf node must be 0
+		move.passCount--
+		if move.passCount == 0 {
 			move.children[index] = nil
 			return true
 		}
@@ -117,6 +117,10 @@ func (t *Trie) Delete(geohash Geohash) bool {
 }
 
 func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error) {
+	if t == nil || t.root == nil || center == nil || radius == 0 {
+		return nil, errors.New("invalid param")
+	}
+
 	l, err := getGeohashLenByDiameter(radius << 1)
 	if err != nil {
 		return nil, err
@@ -145,8 +149,16 @@ func (t *Trie) GetPointsByCircle(center *Point, radius uint32) ([]*Point, error)
 	return res, nil
 }
 
+func (t *Trie) Count() uint32 {
+	if t == nil || t.root == nil {
+		return 0
+	}
+
+	return t.root.passCount
+}
+
 func (t *Trie) search(prefix string) *node {
-	if t == nil || len(prefix) == 0 {
+	if t == nil || t.root == nil || len(prefix) == 0 {
 		return nil
 	}
 
@@ -166,12 +178,12 @@ func (n *node) dfs() []*Box {
 	if n == nil {
 		return nil
 	}
-	if n.passCount == 0 {
-		return []*Box{}
-	}
 
 	if n.isLeaf {
 		return []*Box{n.Box}
+	}
+	if n.passCount == 0 {
+		return []*Box{}
 	}
 
 	res := make([]*Box, 0, n.passCount)
